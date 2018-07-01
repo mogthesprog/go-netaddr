@@ -9,11 +9,42 @@ import (
 func TestIPRangeToCIDRs(t *testing.T) {
 	t.Parallel()
 
-	networks, err := IPRangeToCIDRS(IPv4, NewIP("0.0.0.0"), NewIP("255.255.255.255"))
-	assert.NoError(t, err)
+	var tests = []struct {
+		start *IPAddress
+		end   *IPAddress
+		exp   []*IPNetwork
+	}{
+		//{
+		//	NewIP("0.0.0.0"),
+		//	NewIP("255.255.255.255"),
+		//	[]*IPNetwork{
+		//		newTestNetwork(t, "0.0.0.0/0"),
+		//	},
+		//},
+		{
+			NewIP("0.0.0.0"),
+			NewIP("10.255.255.25"),
+			[]*IPNetwork{
+				newTestNetwork(t, "0.0.0.0/0"),
+			},
+		},
+	}
 
-	assert.Equal(t, networks, networks)
+	for _, test := range tests {
+		subnets, err := IPRangeToCIDRS(IPv4, test.start, test.end)
+		assert.NoError(t, err)
 
+		scs.Dump(subnets)
+
+		assert.Equal(t, test.exp, subnets)
+
+	}
+
+}
+
+func TestNewNetworkFromIP(t *testing.T) {
+	nw := newNetworkFromIP(IPv4, NewIP("1.1.1.1"))
+	assert.Equal(t, newTestNetwork(t, "1.1.1.1/32"), nw)
 }
 
 func newTestNetwork(t *testing.T, net string) *IPNetwork {

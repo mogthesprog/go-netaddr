@@ -17,6 +17,11 @@ type IPNetwork struct {
 	iteratorIndex int
 }
 
+func (nw *IPNetwork) String() string {
+	ones, _ := nw.Mask.Size()
+	return fmt.Sprintf("%s/%d", nw.start.ToIPAddress(), ones)
+}
+
 func NewIPNetwork(cidr string) (*IPNetwork, error) {
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -51,9 +56,9 @@ func newNetworkFromBoundaries(first, last *IPAddress) (*IPNetwork, error) {
 
 	// Search outwards from the longest prefix to find the correct prefix
 	for prefixlen.GreaterThan(NewIPNumber(0)) && ipNumber.GreaterThan(lowestIPNumber) {
-		prefixlen.Sub(NewIPNumber(1))
+		prefixlen = prefixlen.Sub(NewIPNumber(1))
 		// The below represents ipNum &= -(1 << (uint64(width) - uint64(prefixlen)))
-		ipNumber.And(NewIPNumber(1).Lsh(uint(width - prefixlen.Int64())).Neg())
+		ipNumber = ipNumber.And(NewIPNumber(1).Lsh(uint(width - prefixlen.Int64())).Neg())
 	}
 
 	mask := NewMask(prefixlen.Int64(), width)
@@ -133,13 +138,15 @@ func MergeCIDRs(cidrs []IPNetwork) IPSet {
 }
 
 type Partition struct {
-	before []*IPNetwork
-	after  []*IPNetwork
+	before    []*IPNetwork
+	partition *IPNetwork
+	after     []*IPNetwork
 }
 
 func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
-	fmt.Printf("Network: %+v\n\n", nw.First().IP.To4())
-	fmt.Printf("exclude: %+v\n\n", exclude.First().IP.To4())
+
+	scs.Dump(exclude)
+
 	if exclude.Last().LessThan(nw.First()) {
 		// Exclude subnet's upper bound address less than target
 		// subnet's lower bound.
@@ -156,9 +163,13 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 		}
 	}
 
+	scs.Dump(nw.PrefixLength())
+	scs.Dump(exclude.PrefixLength())
 	if nw.PrefixLength().GreaterThanOrEqual(exclude.PrefixLength()) {
 		fmt.Println("return3")
-		return nil
+		return &Partition{
+			partition: exclude,
+		}
 	}
 
 	var left []*IPNetwork
@@ -198,11 +209,12 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 		iLower = matched
 		iUpper = matched.Add(subnetWidth)
 	}
-
 	fmt.Println("return4")
+
 	return &Partition{
-		before: left,
-		after:  right,
+		before:    left,
+		partition: exclude,
+		after:     right,
 	}
 }
 
@@ -213,7 +225,7 @@ func (nw *IPNetwork) PrefixLength() *IPNumber {
 
 // NewNetworkFromInt returns a new network from an ipaddress integer with the default mask of all ones.
 func newNetworkFromIP(version *Version, value *IPAddress) *IPNetwork {
-	mask := net.CIDRMask(int(version.length), int(version.length))
+	mask := net.CIDRMask(int(version.bitLength), int(version.bitLength))
 	return &IPNetwork{
 		start:   value.ToInt(),
 		version: version,
@@ -233,40 +245,29 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 		return nil, err
 	}
 
-	scs.Dump(subnet.First())
-	scs.Dump(start.ToInt())
-
 	if subnet.First().LessThan(start) {
 		excludeAddress := start
-		fmt.Printf("excludeAddress: %s\n", excludeAddress)
 		_, err := excludeAddress.Increment(NewIPNumber(-1))
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("excludeAddress minux 1: %s\n", excludeAddress)
 		exclude := newNetworkFromIP(version, excludeAddress)
-		fmt.Printf("excludeAddress IP: %+v\n", exclude)
 		cidrs = append(cidrs, subnet.Partition(exclude).after...)
-
 		cidrSpan = cidrs[1:]
+		scs.Dump(cidrSpan)
 	}
 
-	spew.Dump(subnet)
-	fmt.Printf("subenet.Last(): %b\n", subnet.Last().IP)
-	fmt.Printf("end: %b\n", end.IP)
-
 	if subnet.Last().GreaterThan(end) {
-		scs.Dump(end)
-		scs.Dump(subnet.Last())
 		excludeAddress := end
-		_, err := excludeAddress.Increment(NewIPNumber(1))
-		if err != nil {
+		excludeAddress, err := excludeAddress.Increment(NewIPNumber(1))
+		if err != nil && err != ErrorAddressOutOFBounds {
 			return nil, err
 		}
 		exclude := newNetworkFromIP(version, excludeAddress)
+		scs.Dump(exclude.Mask)
 		cidrs = append(cidrs, subnet.Partition(exclude).before...)
 	} else {
-		cidrs = append(cidrs, cidrSpan...)
+		cidrs = append(cidrs, subnet)
 	}
 
 	return cidrs, nil
