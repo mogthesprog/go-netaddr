@@ -13,6 +13,10 @@ const (
 )
 
 var (
+	ErrorAddressOutOFBounds = fmt.Errorf("ip number out range of ip-version boundary")
+)
+
+var (
 	IPv4 = &Version{
 		number:    4,
 		length:    4,
@@ -131,17 +135,17 @@ func (ip *IPAddress) Version() *Version {
 // Increment increments the IPAddress by an amount, val, which is of big.Int type.
 func (ip *IPAddress) Increment(val *IPNumber) (*IPAddress, error) {
 	ipNum := ip.ToInt()
-	fmt.Printf("ipNum: %d", ipNum)
 	if ipNum.Equal(NewIPNumber(0)) {
 		return ip, nil
 	}
-	ipNum.Add(val)
+	ipNum = ipNum.Add(val)
 	if ipNum.GreaterThanOrEqual(NewIPNumber(0)) &&
 		ipNum.LessThanOrEqual(ip.Version().max) {
 		ip.IP = ipNum.ToIPAddress().IP
 		return ip, nil
 	}
-	return nil, fmt.Errorf("ip number, %d, out of range for version, %d", ipNum, ip.Version().number)
+
+	return nil, ErrorAddressOutOFBounds
 }
 
 func ValidIPV4(ipBytes []byte) bool {
@@ -167,8 +171,6 @@ func ValidIPV4(ipBytes []byte) bool {
 func (ip *IPAddress) ToInt() *IPNumber {
 	num := NewIPNumber(0)
 	num.SetBytes(*ip.IP)
-
-	fmt.Printf("bigInt Bytes: %b\n", num.Int.Bytes())
 	return num
 }
 
@@ -187,10 +189,6 @@ func (num *IPNumber) ToIPAddress() *IPAddress {
 		bytes = make(net.IP, 16)
 		version = IPv6
 	}
-
-	fmt.Printf("num: %d\n", num)
-	fmt.Printf("len num: %d\n", len(bigintBytes))
-	fmt.Printf("len bytes: %d\n", len(bytes))
 
 	for i := 0; i < len(bytes); i++ {
 		// Handle the case where len(bigintbytes) == 0. This is the case for a
@@ -259,31 +257,31 @@ func MinAddress(addr1, addr2 *IPAddress) *IPAddress {
 }
 
 func (num *IPNumber) Add(v *IPNumber) *IPNumber {
-	num.Int = num.Int.Add(num.Int, v.Int)
-	return num
+	int := big.NewInt(0).Add(num.Int, v.Int)
+	return &IPNumber{int}
 }
 
 func (num *IPNumber) Sub(v *IPNumber) *IPNumber {
-	num.Int = num.Int.Sub(num.Int, v.Int)
-	return num
+	int := big.NewInt(0).Sub(num.Int, v.Int)
+	return &IPNumber{int}
 }
 
 func (num *IPNumber) Exp(v *IPNumber) *IPNumber {
-	num.Int = num.Int.Exp(num.Int, v.Int, nil)
-	return num
+	int := big.NewInt(0).Exp(num.Int, v.Int, nil)
+	return &IPNumber{int}
 }
 
 func (num *IPNumber) And(v *IPNumber) *IPNumber {
-	num.Int = num.Int.And(num.Int, v.Int)
-	return num
+	int := big.NewInt(0).And(num.Int, v.Int)
+	return &IPNumber{int}
 }
 
 func (num *IPNumber) Lsh(v uint) *IPNumber {
-	num.Int = num.Int.Lsh(num.Int, v)
-	return num
+	int := big.NewInt(0).Lsh(num.Int, v)
+	return &IPNumber{int}
 }
 
 func (num *IPNumber) Neg() *IPNumber {
-	num.Int = num.Int.Neg(num.Int)
-	return num
+	int := big.NewInt(0).Neg(num.Int)
+	return &IPNumber{int}
 }
