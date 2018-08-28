@@ -41,3 +41,12 @@ func TestIPAddressToIntConversion(t *testing.T) {
 	}
 
 }
+
+func TestIncrement(t *testing.T) {
+	t.Parallel()
+
+	ip := NewIP("1.1.1.1")
+	ip.Increment(NewIPNumber(1))
+	assert.Equal(t, NewIP("1.1.1.2"), ip)
+
+}
