@@ -14,13 +14,13 @@ func TestIPRangeToCIDRs(t *testing.T) {
 		end   *IPAddress
 		exp   []*IPNetwork
 	}{
-		//{
-		//	NewIP("0.0.0.0"),
-		//	NewIP("255.255.255.255"),
-		//	[]*IPNetwork{
-		//		newTestNetwork(t, "0.0.0.0/0"),
-		//	},
-		//},
+		{
+			NewIP("0.0.0.0"),
+			NewIP("255.255.255.255"),
+			[]*IPNetwork{
+				newTestNetwork(t, "0.0.0.0/0"),
+			},
+		},
 		{
 			NewIP("0.0.0.0"),
 			NewIP("10.255.255.25"),

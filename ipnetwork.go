@@ -145,7 +145,7 @@ type Partition struct {
 
 func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 
-	scs.Dump(exclude)
+	scs.Dump(nw.Mask.Size())
 
 	if exclude.Last().LessThan(nw.First()) {
 		// Exclude subnet's upper bound address less than target
@@ -168,46 +168,61 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 	if nw.PrefixLength().GreaterThanOrEqual(exclude.PrefixLength()) {
 		fmt.Println("return3")
 		return &Partition{
-			partition: exclude,
+			partition: nw,
 		}
 	}
 
 	var left []*IPNetwork
 	var right []*IPNetwork
 
-	targetModuleWidth := nw.version.length
+	targetModuleWidth := nw.version.bitLength
 	newPrefixLength := nw.PrefixLength().Add(NewIPNumber(1))
 
-	subnetWidth := NewIPNumber(2).
-		Exp(NewIPNumber(targetModuleWidth).Sub(newPrefixLength))
+	scs.Dump(targetModuleWidth)
+	scs.Dump(newPrefixLength)
 
 	targetFirst := nw.First().ToInt()
 	version := exclude.version
 	iLower := targetFirst
 
 	// Upper IP
-	iUpper := NewIPNumber(targetFirst.Int64()).Add(subnetWidth)
+	iUpper := targetFirst.Add(
+		NewIPNumber(2).
+			Exp(NewIPNumber(targetModuleWidth).
+				Sub(newPrefixLength)),
+	)
 
 	for {
+		fmt.Printf("exclude prefix length: %+v\n", exclude)
+		fmt.Printf("newprefixlenght: %s\n", newPrefixLength)
+		if exclude.PrefixLength().GreaterThanOrEqual(newPrefixLength) {
+			break
+		}
 		var matched *IPNumber
 		if exclude.First().ToInt().LessThanOrEqual(iUpper) {
 			exclude := newNetworkFromIP(version, iLower.ToIPAddress())
+			exclude.Mask = NewMask(newPrefixLength.Int64(), version.bitLength)
 			left = append(left, exclude)
 			matched = iLower
 		} else {
 			exclude := newNetworkFromIP(version, iUpper.ToIPAddress())
+			exclude.Mask = NewMask(newPrefixLength.Int64(), version.bitLength)
 			right = append(right, exclude)
 			matched = iUpper
 		}
 
-		newPrefixLength.Add(NewIPNumber(1))
+		newPrefixLength = newPrefixLength.Add(NewIPNumber(1))
 
 		if newPrefixLength.GreaterThan(NewIPNumber(targetModuleWidth)) {
 			break
 		}
 
 		iLower = matched
-		iUpper = matched.Add(subnetWidth)
+		iUpper = matched.Add(
+			NewIPNumber(2).
+				Exp(NewIPNumber(targetModuleWidth).
+					Sub(newPrefixLength)),
+		)
 	}
 	fmt.Println("return4")
 
