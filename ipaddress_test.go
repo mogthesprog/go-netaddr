@@ -6,21 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//func (ip *IPAddress) ToInt() *IPNumber {
-//	num := NewIPNumber(0)
-//	num.SetBytes(*ip.IP)
-//	return num
-//}
-//
-//func (num *IPNumber) ToIPAddress() *IPAddress {
-//	bytes := make(net.IP, 16)
-//	bigintBytes := num.Bytes()
-//	for i := 0; i < len(bigintBytes); i++ {
-//		[]byte(bytes)[len(bytes)-(i+1)] = bigintBytes[len(bigintBytes)-(i+1)]
-//	}
-//	return &IPAddress{IP: &bytes}
-//}
-
 func TestIPAddressToIntConversion(t *testing.T) {
 	t.Parallel()
 
@@ -45,8 +30,23 @@ func TestIPAddressToIntConversion(t *testing.T) {
 func TestIncrement(t *testing.T) {
 	t.Parallel()
 
-	ip := NewIP("1.1.1.1")
-	ip.Increment(NewIPNumber(1))
-	assert.Equal(t, NewIP("1.1.1.2"), ip)
+	var tests = []struct {
+		initialValue *IPAddress
+		incrementBy  int64
+		expected     *IPAddress
+		expectedError error
+	}{
+		{ NewIP("1.1.1.1"), 1, NewIP("1.1.1.2"), nil },
+		{ NewIP("1.1.1.1"), 5, NewIP("1.1.1.6"), nil },
+		{ NewIP("1.1.1.255"), 1, NewIP("1.1.2.0"), nil },
+		{ NewIP("1.1.1.254"), 3, NewIP("1.1.2.1"), nil },
+		{ NewIP("255.255.255.255"), 1, nil, ErrorAddressOutOFBounds },
+	}
+
+	for _, test := range tests {
+		result, err := test.initialValue.Increment(NewIPNumber(test.incrementBy))
+		assert.Equal(t, test.expected, result)
+		assert.Equal(t, test.expectedError, err)
+	}
 
 }
