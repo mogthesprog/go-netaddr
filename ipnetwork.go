@@ -322,13 +322,3 @@ func (mask *IPMask) Length() *IPNumber {
 }
 
 func (nw *IPNetwork) Length() *IPNumber { return nw.Mask.Length() }
-
-//// Valid returns true when a subnetwork has a valid mask and start IP.
-//func (nw *IPNetwork) Valid() bool {
-//	nw.
-//	return nw.First().Mask(nw.Mask()) == nw.start
-//}
-//
-//func (num IPNumber) Mask(mask CIDRMask) *IPNumber {
-//	return IPAddress(net.IP(ipNum.ToIPAddress()).Mask(net.IPMask(mask))).ToInt()
-//}
