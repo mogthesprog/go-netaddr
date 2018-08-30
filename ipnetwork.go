@@ -2,7 +2,9 @@ package netaddr
 
 import (
 	"fmt"
+	"math/big"
 	"net"
+	"sort"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -84,29 +86,35 @@ type IPMask struct {
 	*net.IPMask
 }
 
-func (mask *IPMask) Int() {}
+func (m *IPMask) Equals(other *IPMask) bool {
+	maskInt := big.NewInt(0).SetBytes(*m.IPMask)
+	otherInt := big.NewInt(0).SetBytes(*other.IPMask)
+	return maskInt.Cmp(otherInt) == 0
+}
+
+func (m *IPMask) LessThan(other *IPMask) bool {
+	maskInt := big.NewInt(0).SetBytes(*m.IPMask)
+	otherInt := big.NewInt(0).SetBytes(*other.IPMask)
+	return maskInt.Cmp(otherInt) == -1
+}
+
+func (m *IPMask) Int() {}
 
 func MergeCIDRs(cidrs []IPNetwork) IPSet {
 	var (
 		merged IPSet
-		ranges []struct {
-			version *Version
-			first   *IPAddress
-			last    *IPAddress
-			network *IPNetwork
-		}
+		ranges []IPRange
 	)
 
 	for _, cidr := range cidrs {
-		ranges = append(ranges, struct {
-			version *Version
-			first   *IPAddress
-			last    *IPAddress
-			network *IPNetwork
-		}{version: cidr.version, first: cidr.First(), last: cidr.Last(), network: &cidr})
+		ranges = append(ranges, IPRange {
+			version: cidr.version,
+			first: cidr.First(),
+			last: cidr.Last(),
+			network: &cidr})
 	}
 
-	// TODO: Must sort ranges here
+	sort.Sort(ByIPRanges(ranges))
 
 	for i := len(ranges) - 1; i >= 0; i-- {
 		current := ranges[i]
@@ -195,20 +203,20 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 	for {
 		fmt.Printf("exclude prefix length: %+v\n", exclude)
 		fmt.Printf("newprefixlenght: %s\n", newPrefixLength)
-		if exclude.PrefixLength().GreaterThanOrEqual(newPrefixLength) {
+		if exclude.PrefixLength().LessThan(newPrefixLength) {
 			break
 		}
 		var matched *IPNumber
-		if exclude.First().ToInt().LessThanOrEqual(iUpper) {
+		if exclude.First().ToInt().GreaterThanOrEqual(iUpper) {
 			exclude := newNetworkFromIP(version, iLower.ToIPAddress())
 			exclude.Mask = NewMask(newPrefixLength.Int64(), version.bitLength)
 			left = append(left, exclude)
-			matched = iLower
+			matched = iUpper
 		} else {
 			exclude := newNetworkFromIP(version, iUpper.ToIPAddress())
 			exclude.Mask = NewMask(newPrefixLength.Int64(), version.bitLength)
 			right = append(right, exclude)
-			matched = iUpper
+			matched = iLower
 		}
 
 		newPrefixLength = newPrefixLength.Add(NewIPNumber(1))
@@ -225,11 +233,20 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 		)
 	}
 	fmt.Println("return4")
-
+	reverse(&right)
 	return &Partition{
 		before:    left,
 		partition: exclude,
 		after:     right,
+	}
+}
+
+func reverse(slice *[]*IPNetwork) {
+	s := *slice
+
+	for i := 0; i < len(s)/2; i++ {
+		j := len(s) - 1 - i
+		s[i], s[j] = s[j], s[i]
 	}
 }
 
@@ -250,10 +267,7 @@ func newNetworkFromIP(version *Version, value *IPAddress) *IPNetwork {
 
 func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, error) {
 
-	var (
-		cidrs    []*IPNetwork
-		cidrSpan []*IPNetwork
-	)
+	var cidrs []*IPNetwork
 
 	subnet, err := newNetworkFromBoundaries(start, end)
 	if err != nil {
@@ -267,9 +281,15 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 			return nil, err
 		}
 		exclude := newNetworkFromIP(version, excludeAddress)
-		cidrs = append(cidrs, subnet.Partition(exclude).after...)
-		cidrSpan = cidrs[1:]
-		scs.Dump(cidrSpan)
+		afterPartition := subnet.Partition(exclude).after
+		cidrs = append(cidrs, afterPartition...)
+		lastCidrIndex := len(cidrs) - 1
+		if lastCidrIndex >= 0 {
+			subnet = cidrs[lastCidrIndex]
+			// Remove the last element of cidrs
+			cidrs[lastCidrIndex] = &IPNetwork{}
+			cidrs = cidrs[:lastCidrIndex]
+		}
 	}
 
 	if subnet.Last().GreaterThan(end) {
@@ -279,8 +299,8 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 			return nil, err
 		}
 		exclude := newNetworkFromIP(version, excludeAddress)
-		scs.Dump(exclude.Mask)
-		cidrs = append(cidrs, subnet.Partition(exclude).before...)
+		beforePartition := subnet.Partition(exclude).before
+		cidrs = append(cidrs, beforePartition...)
 	} else {
 		cidrs = append(cidrs, subnet)
 	}
@@ -316,9 +336,35 @@ func (nw *IPNetwork) ContainsSubnetwork(other *IPNetwork) bool {
 }
 
 // returns the number of valid ip addresses in a subnet
-func (mask *IPMask) Length() *IPNumber {
-	ones, bits := net.IPMask(*mask.IPMask).Size()
+func (m *IPMask) Length() *IPNumber {
+	ones, bits := net.IPMask(*m.IPMask).Size()
 	return NewIPNumber(2).Exp(NewIPNumber(int64(bits - ones)))
 }
 
 func (nw *IPNetwork) Length() *IPNumber { return nw.Mask.Length() }
+
+func (nw *IPNetwork) Equal(other *IPNetwork) bool {
+	if nw.version != other.version {
+		return false
+	}
+	if !nw.Mask.Equals(other.Mask) {
+		return false
+	}
+	if !nw.start.Equal(other.start) {
+		return false
+	}
+	return true
+}
+
+func (nw *IPNetwork) LessThan(other *IPNetwork) bool {
+	if nw.version != other.version {
+		return nw.version.LessThan(other.version)
+	}
+	if !nw.start.Equal(other.start) {
+		return nw.start.LessThan(other.start)
+	}
+	if !nw.Mask.Equals(other.Mask) {
+		return nw.Mask.LessThan(other.Mask)
+	}
+	return false
+}

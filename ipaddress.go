@@ -54,6 +54,10 @@ type (
 	}
 )
 
+func (v *Version) LessThan(other *Version) bool {
+	return v.length < other.length
+}
+
 func NewMask(ones, bits int64) *IPMask {
 	mask := net.CIDRMask(int(ones), int(bits))
 	return &IPMask{
