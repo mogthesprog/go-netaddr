@@ -31,18 +31,28 @@ func TestIPRangeToCIDRs(t *testing.T) {
 		},
 		{
 			NewIP("0.0.0.0"),
+			NewIP("10.255.255.25"),
+			[]*IPNetwork{
+				newTestNetwork(t, "0.0.0.0/5"), newTestNetwork(t, "8.0.0.0/7"),
+				newTestNetwork(t, "10.0.0.0/9"), newTestNetwork(t, "10.128.0.0/10"),
+				newTestNetwork(t, "10.192.0.0/11"), newTestNetwork(t, "10.224.0.0/12"),
+				newTestNetwork(t, "10.240.0.0/13"), newTestNetwork(t, "10.248.0.0/14"),
+				newTestNetwork(t, "10.252.0.0/15"), newTestNetwork(t, "10.254.0.0/16"),
+				newTestNetwork(t, "10.255.0.0/17"), newTestNetwork(t, "10.255.128.0/18"),
+				newTestNetwork(t, "10.255.192.0/19"), newTestNetwork(t, "10.255.224.0/20"),
+				newTestNetwork(t, "10.255.240.0/21"), newTestNetwork(t, "10.255.248.0/22"),
+				newTestNetwork(t, "10.255.252.0/23"), newTestNetwork(t, "10.255.254.0/24"),
+				newTestNetwork(t, "10.255.255.0/28"), newTestNetwork(t, "10.255.255.16/29"),
+				newTestNetwork(t, "10.255.255.24/31"),
+			},
+		},
+		{
+			NewIP("0.0.0.0"),
 			NewIP("255.255.255.255"),
 			[]*IPNetwork{
 				newTestNetwork(t, "0.0.0.0/0"),
 			},
 		},
-		//{
-		//	NewIP("0.0.0.0"),
-		//	NewIP("10.255.255.25"),
-		//	[]*IPNetwork{
-		//		newTestNetwork(t, "0.0.0.0/0"),
-		//	},
-		//},
 	}
 
 	for _, test := range tests {
@@ -57,42 +67,50 @@ func TestIPRangeToCIDRs(t *testing.T) {
 
 }
 
-func TestIPNetwork_Partition(t *testing.T) {
-	target := newTestNetwork(t, "1.1.0.0/22")
-	exclude := newTestNetwork(t, "1.1.0.255/32")
+func TestIPNetworkPartition(t *testing.T) {
+	t.Parallel()
 
-	expected := Partition{
-		before: []*IPNetwork{
-			newTestNetwork(t, "1.1.0.0/25"), newTestNetwork(t, "1.1.0.128/26"),
-			newTestNetwork(t, "1.1.0.192/27"), newTestNetwork(t, "1.1.0.224/28"),
-			newTestNetwork(t, "1.1.0.240/29"), newTestNetwork(t, "1.1.0.248/30"),
-			newTestNetwork(t, "1.1.0.252/31"), newTestNetwork(t, "1.1.0.254/32"),
+	var tests = []struct {
+		target *IPNetwork
+		exclude  *IPNetwork
+		expected Partition
+	} {
+		{
+			target: newTestNetwork(t, "1.1.2.0/23"),
+			exclude: newTestNetwork(t, "1.1.3.0/32"),
+			expected: Partition{
+				before: []*IPNetwork{
+					newTestNetwork(t, "1.1.2.0/24"),
+				},
+				partition: newTestNetwork(t, "1.1.3.0/32"),
+				after: []*IPNetwork{
+					newTestNetwork(t, "1.1.3.1/32"), newTestNetwork(t, "1.1.3.2/31"),
+					newTestNetwork(t, "1.1.3.4/30"), newTestNetwork(t, "1.1.3.8/29"),
+					newTestNetwork(t, "1.1.3.16/28"), newTestNetwork(t, "1.1.3.32/27"),
+					newTestNetwork(t, "1.1.3.64/26"), newTestNetwork(t, "1.1.3.128/25"),
+				},
+			},
 		},
-		partition: newTestNetwork(t, "1.1.0.255/32"),
-		after: []*IPNetwork{newTestNetwork(t, "1.1.1.0/24"),newTestNetwork(t, "1.1.2.0/23")},
+		{
+			target: newTestNetwork(t, "1.1.0.0/22"),
+			exclude: newTestNetwork(t, "1.1.0.255/32"),
+			expected: Partition{
+				before: []*IPNetwork{
+					newTestNetwork(t, "1.1.0.0/25"), newTestNetwork(t, "1.1.0.128/26"),
+					newTestNetwork(t, "1.1.0.192/27"), newTestNetwork(t, "1.1.0.224/28"),
+					newTestNetwork(t, "1.1.0.240/29"), newTestNetwork(t, "1.1.0.248/30"),
+					newTestNetwork(t, "1.1.0.252/31"), newTestNetwork(t, "1.1.0.254/32"),
+				},
+				partition: newTestNetwork(t, "1.1.0.255/32"),
+				after: []*IPNetwork{newTestNetwork(t, "1.1.1.0/24"),newTestNetwork(t, "1.1.2.0/23")},
+			},
+		},
 	}
-	result := *target.Partition(exclude)
-	assert.Equal(t, expected, result)
-}
 
-func TestIPNetwork_Partition2(t *testing.T) {
-	target := newTestNetwork(t, "1.1.2.0/23")
-	exclude := newTestNetwork(t, "1.1.3.0/32")
-
-	expected := Partition{
-		before: []*IPNetwork{
-			newTestNetwork(t, "1.1.2.0/24"),
-		},
-		partition: newTestNetwork(t, "1.1.3.0/32"),
-		after: []*IPNetwork{
-			newTestNetwork(t, "1.1.3.1/32"), newTestNetwork(t, "1.1.3.2/31"),
-			newTestNetwork(t, "1.1.3.4/30"), newTestNetwork(t, "1.1.3.8/29"),
-			newTestNetwork(t, "1.1.3.16/28"), newTestNetwork(t, "1.1.3.32/27"),
-			newTestNetwork(t, "1.1.3.64/26"), newTestNetwork(t, "1.1.3.128/25"),
-		},
+	for _, test := range tests {
+		result := *test.target.Partition(test.exclude)
+		assert.Equal(t, test.expected, result)
 	}
-	result := *target.Partition(exclude)
-	assert.Equal(t, expected, result)
 }
 
 func TestNewNetworkFromIP(t *testing.T) {
@@ -160,7 +178,7 @@ func TestNetworkLength(t *testing.T) {
 	assert.Equal(t, NewIPNumber(16777216), nw.Length())
 }
 
-func TestIPNetwork_Equal(t *testing.T) {
+func TestIPNetworkEqual(t *testing.T) {
 	t.Parallel()
 
 	network1, _ := NewIPNetwork("10.0.0.0/8")
@@ -185,7 +203,7 @@ func TestIPNetwork_Equal(t *testing.T) {
 	}
 }
 
-func TestIPNetwork_LessThan(t *testing.T) {
+func TestIPNetworkLessThan(t *testing.T) {
 	t.Parallel()
 
 	network1, _ := NewIPNetwork("10.0.0.0/24")

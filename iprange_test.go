@@ -7,18 +7,18 @@ import (
 )
 
 var (
-	cidrIpv4_1, _ = NewIPNetwork("10.0.0.0/24")
-	cidrIpv4_2, _ = NewIPNetwork("10.0.0.0/25")
-	cidrIpv6_1, _ = NewIPNetwork("2001:db8::ff00:42:8328/31")
-	cidrIpv6_2, _ = NewIPNetwork("2001:db8::ff00:42:8328/32")
-	ipv4Range1    = IPRange{IPv4, NewIP("10.0.0.1"), NewIP("10.0.0.2"), cidrIpv4_1}
-	ipv4Range2    = IPRange{IPv4, NewIP("10.0.0.3"), NewIP("10.0.0.4"), cidrIpv4_1}
-	ipv4Range3    = IPRange{IPv4, NewIP("10.0.0.1"), NewIP("10.0.0.3"), cidrIpv4_2}
-	ipv4Range4    = IPRange{IPv4, NewIP("10.0.0.1"), NewIP("10.0.0.3"), cidrIpv4_1}
-	ipv6Range1    = IPRange{IPv6, NewIP("2001:db8::ff00:42:8328"), NewIP("2001:db8::ff00:42:8328"), cidrIpv6_1}
-	ipv6Range2    = IPRange{IPv6, NewIP("2001:db8::ff00:42:8329"), NewIP("2001:db8::ff00:42:8329"), cidrIpv6_2}
-	ipv6Range3    = IPRange{IPv6, NewIP("2001:db8::ff00:42:8328"), NewIP("2001:db8::ff00:42:8329"), cidrIpv6_2}
-	ipv6Range4    = IPRange{IPv6, NewIP("2001:db8::ff00:42:8328"), NewIP("2001:db8::ff00:42:8329"), cidrIpv6_1}
+	cidrIpv41, _ = NewIPNetwork("10.0.0.0/24")
+	cidrIpv42, _ = NewIPNetwork("10.0.0.0/25")
+	cidrIpv61, _ = NewIPNetwork("2001:db8::ff00:42:8328/31")
+	cidrIpv62, _ = NewIPNetwork("2001:db8::ff00:42:8328/32")
+	ipv4Range1   = IPRange{IPv4, NewIP("10.0.0.1"), NewIP("10.0.0.2"), cidrIpv41}
+	ipv4Range2   = IPRange{IPv4, NewIP("10.0.0.3"), NewIP("10.0.0.4"), cidrIpv41}
+	ipv4Range3   = IPRange{IPv4, NewIP("10.0.0.1"), NewIP("10.0.0.3"), cidrIpv42}
+	ipv4Range4   = IPRange{IPv4, NewIP("10.0.0.1"), NewIP("10.0.0.3"), cidrIpv41}
+	ipv6Range1   = IPRange{IPv6, NewIP("2001:db8::ff00:42:8328"), NewIP("2001:db8::ff00:42:8328"), cidrIpv61}
+	ipv6Range2   = IPRange{IPv6, NewIP("2001:db8::ff00:42:8329"), NewIP("2001:db8::ff00:42:8329"), cidrIpv62}
+	ipv6Range3   = IPRange{IPv6, NewIP("2001:db8::ff00:42:8328"), NewIP("2001:db8::ff00:42:8329"), cidrIpv62}
+	ipv6Range4   = IPRange{IPv6, NewIP("2001:db8::ff00:42:8328"), NewIP("2001:db8::ff00:42:8329"), cidrIpv61}
 )
 
 func TestMain(m *testing.M) {
@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 	os.Exit(returnCode)
 }
 
-func TestByIPRanges_Len(t *testing.T) {
+func TestByIPRangesLen(t *testing.T) {
 
 
 	tests := []struct {
@@ -47,7 +47,7 @@ func TestByIPRanges_Len(t *testing.T) {
 	}
 }
 
-func TestByIPRanges_Less(t *testing.T) {
+func TestByIPRangesLess(t *testing.T) {
 	type args struct {
 		i int
 		j int
@@ -83,7 +83,7 @@ func TestByIPRanges_Less(t *testing.T) {
 	}
 }
 
-func TestByIPRanges_Swap(t *testing.T) {
+func TestByIPRangesSwap(t *testing.T) {
 	ranges := ByIPRanges{ipv4Range1, ipv4Range2}
 	expectedRanges := ByIPRanges{ipv4Range2, ipv4Range1}
 	ranges.Swap(0, 1)
