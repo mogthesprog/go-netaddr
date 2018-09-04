@@ -39,7 +39,7 @@ var (
 )
 
 type (
-	// IPNumber is the uint32 representation of an IPv4
+	// IPNumber is the integer representation of an IP address
 	IPNumber  struct{ *big.Int }
 	IPAddress struct {
 		*net.IP
@@ -54,6 +54,10 @@ type (
 	}
 )
 
+func (v *Version) LessThan(other *Version) bool {
+	return v.length < other.length
+}
+
 func NewMask(ones, bits int64) *IPMask {
 	mask := net.CIDRMask(int(ones), int(bits))
 	return &IPMask{
@@ -62,18 +66,18 @@ func NewMask(ones, bits int64) *IPMask {
 }
 
 func NewIP(ip string) *IPAddress {
-	new := net.ParseIP(ip)
-	if new.To4() != nil {
-		new = new.To4()
+	newIP := net.ParseIP(ip)
+	if newIP.To4() != nil {
+		newIP = newIP.To4()
 		return &IPAddress{
-			IP:      &new,
+			IP:      &newIP,
 			version: IPv4,
 		}
 	}
 
-	new = new.To16()
+	newIP = newIP.To16()
 	return &IPAddress{
-		IP:      &new,
+		IP:      &newIP,
 		version: IPv6,
 	}
 }
@@ -82,6 +86,20 @@ func NewIPNumber(v int64) *IPNumber {
 	return &IPNumber{
 		Int: big.NewInt(v),
 	}
+}
+
+func (v *Version) String() string {
+	if v == IPv4 {
+		return "IPv4"
+	} else if v == IPv6 {
+		return "IPv6"
+	} else {
+		return ""
+	}
+}
+
+func (ip *IPAddress) String() string {
+	return fmt.Sprintf("Version: %s , IP: %s", ip.version, ip.IP)
 }
 
 func (ip *IPAddress) Version() *Version {
@@ -93,44 +111,6 @@ func (ip *IPAddress) Version() *Version {
 	}
 	return nil
 }
-
-//func NewIPFromInt(number big.Int, version *Version) *IPAddress {
-//	if version == nil {
-//		// detect the version from the integer
-//		version = IPv4
-//	} else if version == IPv6 {
-//		version = IPv6
-//	}
-//
-//	ipNumber := IPNumber(number)
-//
-//	if ipNumber.GreaterThan(version.max)
-//
-//}
-
-//// netmaskBits In the case IP is a valid netmask,returns the number of non-zero bits
-//// otherwise it returns the width in bits for the IP address version
-//func (ip *IPAddress) netmaskBits() int64 {
-//
-//	if !ip.IsNetmask() {
-//		return ip.Version().length
-//	}
-//
-//	if ip.Version() == nil {
-//		return 0
-//	}
-//	return maskLength
-//}
-
-//func (ip *IPAddress) IsHostmask() bool {
-//	testVal := ip.Increment(big.NewInt(1)))
-//	return testVal&ip.ToInt() == 0
-//}
-//
-//func (ip *IPAddress) IsNetmask() bool {
-//	intValue := (ip.ToInt() ^ ip.Version().max) + 1
-//	return intValue&(intValue-1) == 0
-//}
 
 // Increment increments the IPAddress by an amount, val, which is of big.Int type.
 func (ip *IPAddress) Increment(val *IPNumber) (*IPAddress, error) {
