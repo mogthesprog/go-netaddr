@@ -79,11 +79,11 @@ func TestIPNetworkPartition(t *testing.T) {
 			target: newTestNetwork(t, "1.1.2.0/23"),
 			exclude: newTestNetwork(t, "1.1.3.0/32"),
 			expected: Partition{
-				before: []*IPNetwork{
+				Before: []*IPNetwork{
 					newTestNetwork(t, "1.1.2.0/24"),
 				},
-				partition: newTestNetwork(t, "1.1.3.0/32"),
-				after: []*IPNetwork{
+				Partition: newTestNetwork(t, "1.1.3.0/32"),
+				After: []*IPNetwork{
 					newTestNetwork(t, "1.1.3.1/32"), newTestNetwork(t, "1.1.3.2/31"),
 					newTestNetwork(t, "1.1.3.4/30"), newTestNetwork(t, "1.1.3.8/29"),
 					newTestNetwork(t, "1.1.3.16/28"), newTestNetwork(t, "1.1.3.32/27"),
@@ -95,14 +95,14 @@ func TestIPNetworkPartition(t *testing.T) {
 			target: newTestNetwork(t, "1.1.0.0/22"),
 			exclude: newTestNetwork(t, "1.1.0.255/32"),
 			expected: Partition{
-				before: []*IPNetwork{
+				Before: []*IPNetwork{
 					newTestNetwork(t, "1.1.0.0/25"), newTestNetwork(t, "1.1.0.128/26"),
 					newTestNetwork(t, "1.1.0.192/27"), newTestNetwork(t, "1.1.0.224/28"),
 					newTestNetwork(t, "1.1.0.240/29"), newTestNetwork(t, "1.1.0.248/30"),
 					newTestNetwork(t, "1.1.0.252/31"), newTestNetwork(t, "1.1.0.254/32"),
 				},
-				partition: newTestNetwork(t, "1.1.0.255/32"),
-				after: []*IPNetwork{newTestNetwork(t, "1.1.1.0/24"),newTestNetwork(t, "1.1.2.0/23")},
+				Partition: newTestNetwork(t, "1.1.0.255/32"),
+				After:     []*IPNetwork{newTestNetwork(t, "1.1.1.0/24"),newTestNetwork(t, "1.1.2.0/23")},
 			},
 		},
 	}
