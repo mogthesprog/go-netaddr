@@ -146,9 +146,9 @@ func MergeCIDRs(cidrs []IPNetwork) IPSet {
 }
 
 type Partition struct {
-	before    []*IPNetwork
-	partition *IPNetwork
-	after     []*IPNetwork
+	Before    []*IPNetwork
+	Partition *IPNetwork
+	After     []*IPNetwork
 }
 
 func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
@@ -160,14 +160,14 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 		// subnet's lower bound.
 		fmt.Println("return1")
 		return &Partition{
-			after: []*IPNetwork{nw},
+			After: []*IPNetwork{nw},
 		}
 	} else if nw.Last().LessThan(exclude.First()) {
 		// Exclude subnet's lower bound address greater than target
 		// subnet's upper bound.
 		fmt.Println("return2")
 		return &Partition{
-			before: []*IPNetwork{nw},
+			Before: []*IPNetwork{nw},
 		}
 	}
 
@@ -176,7 +176,7 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 	if nw.PrefixLength().GreaterThanOrEqual(exclude.PrefixLength()) {
 		fmt.Println("return3")
 		return &Partition{
-			partition: nw,
+			Partition: nw,
 		}
 	}
 
@@ -235,9 +235,9 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 	fmt.Println("return4")
 	reverse(&right)
 	return &Partition{
-		before:    left,
-		partition: exclude,
-		after:     right,
+		Before:    left,
+		Partition: exclude,
+		After:     right,
 	}
 }
 
@@ -281,7 +281,7 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 			return nil, err
 		}
 		exclude := newNetworkFromIP(version, excludeAddress)
-		afterPartition := subnet.Partition(exclude).after
+		afterPartition := subnet.Partition(exclude).After
 		cidrs = append(cidrs, afterPartition...)
 		lastCidrIndex := len(cidrs) - 1
 		if lastCidrIndex >= 0 {
@@ -299,7 +299,7 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 			return nil, err
 		}
 		exclude := newNetworkFromIP(version, excludeAddress)
-		beforePartition := subnet.Partition(exclude).before
+		beforePartition := subnet.Partition(exclude).Before
 		cidrs = append(cidrs, beforePartition...)
 	} else {
 		cidrs = append(cidrs, subnet)
