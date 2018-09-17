@@ -353,12 +353,12 @@ func (set *IPSet) Add() {}
 func (set *IPSet) Pop() {}
 
 func (nw *IPNetwork) ContainsAddress(addr *IPAddress) bool {
-	return nw.First().LessThan(addr) && addr.LessThan(nw.Last())
+	return nw.First().LessThanOrEqual(addr) && addr.LessThanOrEqual(nw.Last())
 }
 
 func (nw *IPNetwork) ContainsSubnetwork(other *IPNetwork) bool {
-	return nw.First().LessThan(other.First()) &&
-		nw.Last().GreaterThan(other.Last())
+	return nw.First().LessThanOrEqual(other.First()) &&
+		nw.Last().GreaterThanOrEqual(other.Last())
 }
 
 // returns the number of valid ip addresses in a subnet
