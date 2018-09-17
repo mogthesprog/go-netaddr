@@ -1,7 +1,9 @@
 package netaddr
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"net"
 	"sort"
@@ -98,8 +100,6 @@ func (m *IPMask) LessThan(other *IPMask) bool {
 	return maskInt.Cmp(otherInt) == -1
 }
 
-func (m *IPMask) Int() {}
-
 func MergeCIDRs(cidrs []IPNetwork) IPSet {
 	var (
 		merged IPSet
@@ -107,10 +107,10 @@ func MergeCIDRs(cidrs []IPNetwork) IPSet {
 	)
 
 	for _, cidr := range cidrs {
-		ranges = append(ranges, IPRange {
+		ranges = append(ranges, IPRange{
 			version: cidr.version,
-			first: cidr.First(),
-			last: cidr.Last(),
+			first:   cidr.First(),
+			last:    cidr.Last(),
 			network: &cidr})
 	}
 
@@ -239,6 +239,32 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 		Partition: exclude,
 		After:     right,
 	}
+}
+
+// Divide a subnet into smaller subnets based on the provided CIDR prefix
+func (nw *IPNetwork) Subnet(newCIDRPrefix int) ([]*IPNetwork, error) {
+	thisCidrPrefix, addressBits := nw.Mask.Size()
+	if !(0 <= thisCidrPrefix || thisCidrPrefix <= addressBits) {
+		return nil, errors.New(fmt.Sprintf("Prefix %d is not valid", thisCidrPrefix))
+	}
+
+	if thisCidrPrefix > newCIDRPrefix {
+		return []*IPNetwork{}, nil
+	}
+	maxNoSubnets := int(math.Pow(2, float64(addressBits-thisCidrPrefix)) / math.Pow(2, float64(addressBits-newCIDRPrefix)))
+	var results []*IPNetwork
+	for i := 0; i < maxNoSubnets; i++ {
+		newCIDR := fmt.Sprintf("%s/%d", nw.First().IP, newCIDRPrefix)
+		newSubnet, err := NewIPNetwork(newCIDR)
+		if err != nil {
+			return nil, err
+		}
+		sL := newSubnet.Length()
+		sL.Mul(sL.Int, big.NewInt(int64(i)))
+		newSubnet.start = newSubnet.start.Add(sL)
+		results = append(results, newSubnet)
+	}
+	return results, nil
 }
 
 func reverse(slice *[]*IPNetwork) {
