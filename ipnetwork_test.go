@@ -71,12 +71,12 @@ func TestIPNetworkPartition(t *testing.T) {
 	t.Parallel()
 
 	var tests = []struct {
-		target *IPNetwork
+		target   *IPNetwork
 		exclude  *IPNetwork
 		expected Partition
-	} {
+	}{
 		{
-			target: newTestNetwork(t, "1.1.2.0/23"),
+			target:  newTestNetwork(t, "1.1.2.0/23"),
 			exclude: newTestNetwork(t, "1.1.3.0/32"),
 			expected: Partition{
 				Before: []*IPNetwork{
@@ -92,7 +92,7 @@ func TestIPNetworkPartition(t *testing.T) {
 			},
 		},
 		{
-			target: newTestNetwork(t, "1.1.0.0/22"),
+			target:  newTestNetwork(t, "1.1.0.0/22"),
 			exclude: newTestNetwork(t, "1.1.0.255/32"),
 			expected: Partition{
 				Before: []*IPNetwork{
@@ -102,7 +102,7 @@ func TestIPNetworkPartition(t *testing.T) {
 					newTestNetwork(t, "1.1.0.252/31"), newTestNetwork(t, "1.1.0.254/32"),
 				},
 				Partition: newTestNetwork(t, "1.1.0.255/32"),
-				After:     []*IPNetwork{newTestNetwork(t, "1.1.1.0/24"),newTestNetwork(t, "1.1.2.0/23")},
+				After:     []*IPNetwork{newTestNetwork(t, "1.1.1.0/24"), newTestNetwork(t, "1.1.2.0/23")},
 			},
 		},
 	}
@@ -277,5 +277,44 @@ func TestNewNetworkFromBoundaries(t *testing.T) {
 	for _, test := range tests {
 
 		assert.Equal(t, test.exp, test.net, "error creating network: %s", test.exp)
+	}
+}
+
+func TestIPNetworkSubnet(t *testing.T) {
+	var tests = []struct {
+		name       string
+		target     *IPNetwork
+		cidrPrefix int
+		expected   []*IPNetwork
+		wantErr    bool
+	}{
+		{"new CIDR less than old CIDR", newTestNetwork(t, "10.0.0.0/8"), 7, []*IPNetwork{}, false},
+		{"new CIDR same as old CIDR", newTestNetwork(t, "10.0.0.0/8"), 8, []*IPNetwork{newTestNetwork(t, "10.0.0.0/8")}, false},
+		{"new CIDR greater than old CIDR", newTestNetwork(t, "10.0.0.0/8"), 9,
+			[]*IPNetwork{newTestNetwork(t, "10.0.0.0/9"), newTestNetwork(t, "10.128.0.0/9")},
+			false,
+		},
+		{"new CIDR greater than old CIDR", newTestNetwork(t, "10.0.0.0/8"), 10,
+			[]*IPNetwork{
+				newTestNetwork(t, "10.0.0.0/10"), newTestNetwork(t, "10.64.0.0/10"),
+				newTestNetwork(t, "10.128.0.0/10"), newTestNetwork(t, "10.192.0.0/10"),
+			},
+			false,
+		},
+		{"negative new CIDR", newTestNetwork(t, "10.0.0.0/8"), -1, []*IPNetwork{}, false},
+		{"new CIDR too large for ipv4", newTestNetwork(t, "10.0.0.0/8"), 33, []*IPNetwork{}, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := test.target.Subnet(test.cidrPrefix)
+			if (err != nil) != test.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, test.wantErr)
+				return
+			}
+			assert.Equal(t, len(test.expected), len(result))
+			for i, thisElement := range result {
+				assert.Equal(t, test.expected[i], thisElement)
+			}
+		})
 	}
 }
