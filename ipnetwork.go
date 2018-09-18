@@ -116,7 +116,7 @@ func MergeCIDRs(cidrs []IPNetwork) IPSet {
 
 	sort.Sort(ByIPRanges(ranges))
 
-	for i := len(ranges) - 1; i >= 0; i-- {
+	for i := len(ranges) - 1; i > 0; i-- {
 		current := ranges[i]
 		next := ranges[i-1]
 		if current.version == next.version &&
@@ -153,28 +153,21 @@ type Partition struct {
 
 func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 
-	scs.Dump(nw.Mask.Size())
-
 	if exclude.Last().LessThan(nw.First()) {
 		// Exclude subnet's upper bound address less than target
 		// subnet's lower bound.
-		fmt.Println("return1")
 		return &Partition{
 			After: []*IPNetwork{nw},
 		}
 	} else if nw.Last().LessThan(exclude.First()) {
 		// Exclude subnet's lower bound address greater than target
 		// subnet's upper bound.
-		fmt.Println("return2")
 		return &Partition{
 			Before: []*IPNetwork{nw},
 		}
 	}
 
-	scs.Dump(nw.PrefixLength())
-	scs.Dump(exclude.PrefixLength())
 	if nw.PrefixLength().GreaterThanOrEqual(exclude.PrefixLength()) {
-		fmt.Println("return3")
 		return &Partition{
 			Partition: nw,
 		}
@@ -185,9 +178,6 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 
 	targetModuleWidth := nw.version.bitLength
 	newPrefixLength := nw.PrefixLength().Add(NewIPNumber(1))
-
-	scs.Dump(targetModuleWidth)
-	scs.Dump(newPrefixLength)
 
 	targetFirst := nw.First().ToInt()
 	version := exclude.version
@@ -201,8 +191,6 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 	)
 
 	for {
-		fmt.Printf("exclude prefix length: %+v\n", exclude)
-		fmt.Printf("newprefixlenght: %s\n", newPrefixLength)
 		if exclude.PrefixLength().LessThan(newPrefixLength) {
 			break
 		}
@@ -232,7 +220,6 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 					Sub(newPrefixLength)),
 		)
 	}
-	fmt.Println("return4")
 	reverse(&right)
 	return &Partition{
 		Before:    left,
