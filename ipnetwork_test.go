@@ -58,9 +58,6 @@ func TestIPRangeToCIDRs(t *testing.T) {
 	for _, test := range tests {
 		subnets, err := IPRangeToCIDRS(IPv4, test.start, test.end)
 		assert.NoError(t, err)
-
-		scs.Dump(subnets)
-
 		assert.Equal(t, test.exp, subnets)
 
 	}
@@ -281,6 +278,7 @@ func TestNewNetworkFromBoundaries(t *testing.T) {
 }
 
 func TestIPNetworkSubnet(t *testing.T) {
+	t.Parallel()
 	var tests = []struct {
 		name       string
 		target     *IPNetwork
@@ -318,3 +316,55 @@ func TestIPNetworkSubnet(t *testing.T) {
 		})
 	}
 }
+
+//func TestMergeCIDRS(t *testing.T) {
+//	t.Parallel()
+//
+//	tests := []struct {
+//		name          string
+//		initialCIDRS  []IPNetwork
+//		expectedCIDRS IPSet
+//	}{
+//		//{
+//		//	"already merged CIDRs",
+//		//	[]IPNetwork{
+//		//		*newTestNetwork(t, "10.1.0.0/16"), *newTestNetwork(t, "10.2.0.0/15"),
+//		//		*newTestNetwork(t, "10.4.0.0/14"), *newTestNetwork(t, "10.8.0.0/13"),
+//		//		*newTestNetwork(t, "10.16.0.0/12"), *newTestNetwork(t, "10.32.0.0/11"),
+//		//		*newTestNetwork(t, "10.64.0.0/10"), *newTestNetwork(t, "10.128.0.0/9"),
+//		//	},
+//		//	[]*IPNetwork{
+//		//		newTestNetwork(t, "10.1.0.0/16"), newTestNetwork(t, "10.2.0.0/15"),
+//		//		newTestNetwork(t, "10.4.0.0/14"), newTestNetwork(t, "10.8.0.0/13"),
+//		//		newTestNetwork(t, "10.16.0.0/12"), newTestNetwork(t, "10.32.0.0/11"),
+//		//		newTestNetwork(t, "10.64.0.0/10"), newTestNetwork(t, "10.128.0.0/9"),
+//		//	},
+//		//},
+//		//{
+//		//	"CIDRs require merging2",
+//		//	[]IPNetwork{
+//		//		*newTestNetwork(t, "10.0.0.0/16"), *newTestNetwork(t, "10.1.0.0/16"),
+//		//		*newTestNetwork(t, "10.2.0.0/16"),
+//		//	},
+//		//	[]*IPNetwork{
+//		//		newTestNetwork(t, "10.0.0.0/14"),
+//		//	},
+//		//},
+//		{
+//			"CIDRs require merging",
+//			[]IPNetwork{
+//				*newTestNetwork(t, "192.241.36.12/30"), *newTestNetwork(t, "192.241.36.8/30"),
+//			},
+//			[]*IPNetwork{
+//				newTestNetwork(t, "192.241.36.8/29"),
+//			},
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			result := MergeCIDRs(tt.initialCIDRS)
+//			fmt.Printf("%v", result)
+//			assert.Equal(t, tt.expectedCIDRS, result)
+//		})
+//	}
+//}
