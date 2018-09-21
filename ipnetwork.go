@@ -1,7 +1,9 @@
 package netaddr
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"net"
 	"sort"
@@ -98,8 +100,6 @@ func (m *IPMask) LessThan(other *IPMask) bool {
 	return maskInt.Cmp(otherInt) == -1
 }
 
-func (m *IPMask) Int() {}
-
 func MergeCIDRs(cidrs []IPNetwork) IPSet {
 	var (
 		merged IPSet
@@ -107,16 +107,16 @@ func MergeCIDRs(cidrs []IPNetwork) IPSet {
 	)
 
 	for _, cidr := range cidrs {
-		ranges = append(ranges, IPRange {
+		ranges = append(ranges, IPRange{
 			version: cidr.version,
-			first: cidr.First(),
-			last: cidr.Last(),
+			first:   cidr.First(),
+			last:    cidr.Last(),
 			network: &cidr})
 	}
 
 	sort.Sort(ByIPRanges(ranges))
 
-	for i := len(ranges) - 1; i >= 0; i-- {
+	for i := len(ranges) - 1; i > 0; i-- {
 		current := ranges[i]
 		next := ranges[i-1]
 		if current.version == next.version &&
@@ -146,37 +146,30 @@ func MergeCIDRs(cidrs []IPNetwork) IPSet {
 }
 
 type Partition struct {
-	before    []*IPNetwork
-	partition *IPNetwork
-	after     []*IPNetwork
+	Before    []*IPNetwork
+	Partition *IPNetwork
+	After     []*IPNetwork
 }
 
 func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 
-	scs.Dump(nw.Mask.Size())
-
 	if exclude.Last().LessThan(nw.First()) {
 		// Exclude subnet's upper bound address less than target
 		// subnet's lower bound.
-		fmt.Println("return1")
 		return &Partition{
-			after: []*IPNetwork{nw},
+			After: []*IPNetwork{nw},
 		}
 	} else if nw.Last().LessThan(exclude.First()) {
 		// Exclude subnet's lower bound address greater than target
 		// subnet's upper bound.
-		fmt.Println("return2")
 		return &Partition{
-			before: []*IPNetwork{nw},
+			Before: []*IPNetwork{nw},
 		}
 	}
 
-	scs.Dump(nw.PrefixLength())
-	scs.Dump(exclude.PrefixLength())
 	if nw.PrefixLength().GreaterThanOrEqual(exclude.PrefixLength()) {
-		fmt.Println("return3")
 		return &Partition{
-			partition: nw,
+			Partition: nw,
 		}
 	}
 
@@ -185,9 +178,6 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 
 	targetModuleWidth := nw.version.bitLength
 	newPrefixLength := nw.PrefixLength().Add(NewIPNumber(1))
-
-	scs.Dump(targetModuleWidth)
-	scs.Dump(newPrefixLength)
 
 	targetFirst := nw.First().ToInt()
 	version := exclude.version
@@ -201,8 +191,6 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 	)
 
 	for {
-		fmt.Printf("exclude prefix length: %+v\n", exclude)
-		fmt.Printf("newprefixlenght: %s\n", newPrefixLength)
 		if exclude.PrefixLength().LessThan(newPrefixLength) {
 			break
 		}
@@ -232,13 +220,38 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 					Sub(newPrefixLength)),
 		)
 	}
-	fmt.Println("return4")
 	reverse(&right)
 	return &Partition{
-		before:    left,
-		partition: exclude,
-		after:     right,
+		Before:    left,
+		Partition: exclude,
+		After:     right,
 	}
+}
+
+// Divide a subnet into smaller subnets based on the provided CIDR prefix
+func (nw *IPNetwork) Subnet(newCIDRPrefix int) ([]*IPNetwork, error) {
+	thisCidrPrefix, addressBits := nw.Mask.Size()
+	if !(0 <= thisCidrPrefix || thisCidrPrefix <= addressBits) {
+		return nil, errors.New(fmt.Sprintf("Prefix %d is not valid", thisCidrPrefix))
+	}
+
+	if thisCidrPrefix > newCIDRPrefix {
+		return []*IPNetwork{}, nil
+	}
+	maxNoSubnets := int(math.Pow(2, float64(addressBits-thisCidrPrefix)) / math.Pow(2, float64(addressBits-newCIDRPrefix)))
+	var results []*IPNetwork
+	for i := 0; i < maxNoSubnets; i++ {
+		newCIDR := fmt.Sprintf("%s/%d", nw.First().IP, newCIDRPrefix)
+		newSubnet, err := NewIPNetwork(newCIDR)
+		if err != nil {
+			return nil, err
+		}
+		sL := newSubnet.Length()
+		sL.Mul(sL.Int, big.NewInt(int64(i)))
+		newSubnet.start = newSubnet.start.Add(sL)
+		results = append(results, newSubnet)
+	}
+	return results, nil
 }
 
 func reverse(slice *[]*IPNetwork) {
@@ -281,7 +294,7 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 			return nil, err
 		}
 		exclude := newNetworkFromIP(version, excludeAddress)
-		afterPartition := subnet.Partition(exclude).after
+		afterPartition := subnet.Partition(exclude).After
 		cidrs = append(cidrs, afterPartition...)
 		lastCidrIndex := len(cidrs) - 1
 		if lastCidrIndex >= 0 {
@@ -299,7 +312,7 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 			return nil, err
 		}
 		exclude := newNetworkFromIP(version, excludeAddress)
-		beforePartition := subnet.Partition(exclude).before
+		beforePartition := subnet.Partition(exclude).Before
 		cidrs = append(cidrs, beforePartition...)
 	} else {
 		cidrs = append(cidrs, subnet)
@@ -327,12 +340,12 @@ func (set *IPSet) Add() {}
 func (set *IPSet) Pop() {}
 
 func (nw *IPNetwork) ContainsAddress(addr *IPAddress) bool {
-	return nw.First().LessThan(addr) && addr.LessThan(nw.Last())
+	return nw.First().LessThanOrEqual(addr) && addr.LessThanOrEqual(nw.Last())
 }
 
 func (nw *IPNetwork) ContainsSubnetwork(other *IPNetwork) bool {
-	return nw.First().LessThan(other.First()) &&
-		nw.Last().GreaterThan(other.Last())
+	return nw.First().LessThanOrEqual(other.First()) &&
+		nw.Last().GreaterThanOrEqual(other.Last())
 }
 
 // returns the number of valid ip addresses in a subnet
