@@ -99,7 +99,7 @@ func (v *Version) String() string {
 }
 
 func (ip *IPAddress) String() string {
-	return fmt.Sprintf("Version: %s , IP: %s", ip.version, ip.IP)
+	return ip.IP.String()
 }
 
 func (ip *IPAddress) Version() *Version {
