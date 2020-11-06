@@ -54,10 +54,12 @@ type (
 	}
 )
 
+// Compares two IP Address versions, v and other. Returns true if v is less than other.
 func (v *Version) LessThan(other *Version) bool {
 	return v.length < other.length
 }
 
+// NewMask returns a new IPMask object with the passed ones and bits.
 func NewMask(ones, bits int64) *IPMask {
 	mask := net.CIDRMask(int(ones), int(bits))
 	return &IPMask{
@@ -65,6 +67,7 @@ func NewMask(ones, bits int64) *IPMask {
 	}
 }
 
+// NewIP returns a new IPAddress object, initialised with the IP info parsed from ip.
 func NewIP(ip string) *IPAddress {
 	newIP := net.ParseIP(ip)
 	if newIP.To4() != nil {
@@ -82,12 +85,15 @@ func NewIP(ip string) *IPAddress {
 	}
 }
 
+// NewIPNumber returns an IPNumber for the passed number.
 func NewIPNumber(v int64) *IPNumber {
 	return &IPNumber{
 		Int: big.NewInt(v),
 	}
 }
 
+
+// String returns the string representation of version v.
 func (v *Version) String() string {
 	if v == IPv4 {
 		return "IPv4"
@@ -98,10 +104,12 @@ func (v *Version) String() string {
 	}
 }
 
+// String returns the string representation of address ip.
 func (ip *IPAddress) String() string {
 	return ip.IP.String()
 }
 
+// Version returns the ip version for IPAddress, ip.
 func (ip *IPAddress) Version() *Version {
 	if len(*ip.IP) == IPv6len {
 		return IPv6
@@ -128,6 +136,7 @@ func (ip *IPAddress) Increment(val *IPNumber) (*IPAddress, error) {
 	return nil, ErrorAddressOutOFBounds
 }
 
+// ValidIPV4 returns true when the passed bytes are a valid IPV4.
 func ValidIPV4(ipBytes []byte) bool {
 	// we need to check for length 0, since big.Int has length 0 for big.Int(0)
 	if len(ipBytes) == IPv4len || len(ipBytes) == 0 {
@@ -148,12 +157,14 @@ func ValidIPV4(ipBytes []byte) bool {
 	return ipv4Flag
 }
 
+// ToInt returns the integer representation (IPNumber) for the given IPAddress.
 func (ip *IPAddress) ToInt() *IPNumber {
 	num := NewIPNumber(0)
 	num.SetBytes(*ip.IP)
 	return num
 }
 
+// ToIPAddress convers the given IPNumber object to an IPAddress.
 func (num *IPNumber) ToIPAddress() *IPAddress {
 	var (
 		bytes   net.IP
@@ -184,6 +195,7 @@ func (num *IPNumber) ToIPAddress() *IPAddress {
 	}
 }
 
+// GreaterThan compares two IPNumbers, returning true when num is greater than other.
 func (num *IPNumber) GreaterThan(other *IPNumber) bool {
 	cmp := num.Cmp(other.Int)
 	if cmp == 1 {
@@ -191,6 +203,8 @@ func (num *IPNumber) GreaterThan(other *IPNumber) bool {
 	}
 	return false
 }
+
+// GreaterThanOrEqual compares two IPNumbers, returning true when num is greater than or equal to other.
 func (num *IPNumber) GreaterThanOrEqual(other *IPNumber) bool {
 	if cmp := num.Cmp(other.Int); cmp >= 0 {
 		return true

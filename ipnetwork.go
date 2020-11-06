@@ -13,6 +13,7 @@ import (
 
 var scs = spew.ConfigState{Indent: "\t"}
 
+// IPNetwork defines an IPAddress network, including version and mask.
 type IPNetwork struct {
 	start   *IPNumber
 	version *Version
@@ -21,6 +22,7 @@ type IPNetwork struct {
 	iteratorIndex int
 }
 
+// Returns the string representation of the netwrok - i.e. 127.0.0.1/8
 func (nw *IPNetwork) String() string {
 	ones, _ := nw.Mask.Size()
 	return fmt.Sprintf("%s/%d", nw.start.ToIPAddress(), ones)

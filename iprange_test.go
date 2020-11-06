@@ -27,8 +27,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestByIPRangesLen(t *testing.T) {
-
-
 	tests := []struct {
 		name   string
 		ranges ByIPRanges
