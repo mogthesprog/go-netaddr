@@ -163,7 +163,7 @@ func (ip *IPAddress) ToInt() *IPNumber {
 	return num
 }
 
-// ToIPAddress convers the given IPNumber object to an IPAddress.
+// ToIPAddress converts the given IPNumber object to an IPAddress.
 func (num *IPNumber) ToIPAddress() *IPAddress {
 	var (
 		bytes   net.IP
@@ -197,10 +197,7 @@ func (num *IPNumber) ToIPAddress() *IPAddress {
 // GreaterThan compares two IPNumbers, returning true when num is greater than other.
 func (num *IPNumber) GreaterThan(other *IPNumber) bool {
 	cmp := num.Cmp(other.Int)
-	if cmp == 1 {
-		return true
-	}
-	return false
+	return cmp == 1
 }
 
 // GreaterThanOrEqual compares two IPNumbers, returning true when num is greater than or equal to other.
@@ -223,10 +220,7 @@ func (ip *IPAddress) GreaterThanOrEqual(other *IPAddress) bool {
 
 func (num *IPNumber) LessThan(other *IPNumber) bool {
 	cmp := num.Cmp(other.Int)
-	if cmp == -1 {
-		return true
-	}
-	return false
+	return cmp == -1
 }
 func (num *IPNumber) LessThanOrEqual(other *IPNumber) bool {
 	if cmp := num.Cmp(other.Int); cmp <= 0 {
@@ -236,11 +230,7 @@ func (num *IPNumber) LessThanOrEqual(other *IPNumber) bool {
 }
 func (num *IPNumber) Equal(other *IPNumber) bool {
 	cmp := num.Cmp(other.Int)
-	if cmp == 0 {
-		return true
-	}
-	return false
-
+	return cmp == 0
 }
 func MinAddress(addr1, addr2 *IPAddress) *IPAddress {
 	if addr1.ToInt().LessThanOrEqual(addr2.ToInt()) {
