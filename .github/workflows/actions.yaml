@@ -2,16 +2,23 @@ name: Go Test
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 on: [push]
 jobs:
-  Test:
+  go-latest:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [ '1.22', '1.21' ]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Go ${{ matrix.go-version }}
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: 1.21
+      - name: Test with the Go CLI
+        run: go test ./...
+  go-latest-minus-1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.21
       - name: Test with the Go CLI
         run: go test ./...
