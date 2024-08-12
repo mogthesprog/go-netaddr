@@ -31,16 +31,16 @@ func TestIncrement(t *testing.T) {
 	t.Parallel()
 
 	var tests = []struct {
-		initialValue *IPAddress
-		incrementBy  int64
-		expected     *IPAddress
+		initialValue  *IPAddress
+		incrementBy   int64
+		expected      *IPAddress
 		expectedError error
 	}{
-		{ NewIP("1.1.1.1"), 1, NewIP("1.1.1.2"), nil },
-		{ NewIP("1.1.1.1"), 5, NewIP("1.1.1.6"), nil },
-		{ NewIP("1.1.1.255"), 1, NewIP("1.1.2.0"), nil },
-		{ NewIP("1.1.1.254"), 3, NewIP("1.1.2.1"), nil },
-		{ NewIP("255.255.255.255"), 1, nil, ErrorAddressOutOFBounds },
+		{NewIP("1.1.1.1"), 1, NewIP("1.1.1.2"), nil},
+		{NewIP("1.1.1.1"), 5, NewIP("1.1.1.6"), nil},
+		{NewIP("1.1.1.255"), 1, NewIP("1.1.2.0"), nil},
+		{NewIP("1.1.1.254"), 3, NewIP("1.1.2.1"), nil},
+		{NewIP("255.255.255.255"), 1, nil, ErrorAddressOutOFBounds},
 	}
 
 	for _, test := range tests {

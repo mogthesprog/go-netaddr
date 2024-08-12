@@ -92,7 +92,6 @@ func NewIPNumber(v int64) *IPNumber {
 	}
 }
 
-
 // String returns the string representation of version v.
 func (v *Version) String() string {
 	if v == IPv4 {

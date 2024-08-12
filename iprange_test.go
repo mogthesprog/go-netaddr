@@ -34,7 +34,7 @@ func TestByIPRangesLen(t *testing.T) {
 	}{
 		{"Empty collection", []IPRange{}, 0},
 		{"One element", []IPRange{ipv4Range1}, 1},
-		{"Multiple elements", []IPRange{ipv4Range1, ipv4Range2,}, 2},
+		{"Multiple elements", []IPRange{ipv4Range1, ipv4Range2}, 2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

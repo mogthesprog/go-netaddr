@@ -37,4 +37,3 @@ func (rs ByIPRanges) Swap(i, j int) {
 	rs[i] = rs[j]
 	rs[j] = ith
 }
-
