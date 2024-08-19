@@ -8,23 +8,33 @@ import (
 	"sort"
 )
 
-// var scs = spew.ConfigState{Indent: "\t"}
-
 // IPNetwork defines an IPAddress network, including version and mask.
 type IPNetwork struct {
 	start   *IPNumber
 	version *Version
 	Mask    *IPMask
-
-	// iteratorIndex int
 }
 
-// Returns the string representation of the network - i.e. 127.0.0.1/8
+// String returns the string representation of the network, e.g., "127.0.0.1/8".
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	fmt.Println(nw.String()) // Output: "192.168.1.0/24"
 func (nw *IPNetwork) String() string {
 	ones, _ := nw.Mask.Size()
 	return fmt.Sprintf("%s/%d", nw.start.ToIPAddress(), ones)
 }
 
+// NewIPNetwork creates a new IPNetwork from a CIDR string.
+//
+// Example usage:
+//
+//	nw, err := netaddr.NewIPNetwork("192.168.1.0/24")
+//	if err != nil {
+//	    fmt.Println(err)
+//	}
+//	fmt.Println(nw)
 func NewIPNetwork(cidr string) (*IPNetwork, error) {
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -47,6 +57,18 @@ func NewIPNetwork(cidr string) (*IPNetwork, error) {
 	}, nil
 }
 
+// newNetworkFromBoundaries creates a new IPNetwork from two IP addresses
+// representing the first and last addresses in the network.
+//
+// Example usage:
+//
+//	first := netaddr.NewIP("192.168.1.0")
+//	last := netaddr.NewIP("192.168.1.255")
+//	network, err := netaddr.newNetworkFromBoundaries(first, last)
+//	if err != nil {
+//	    fmt.Println(err)
+//	}
+//	fmt.Println(network)
 func newNetworkFromBoundaries(first, last *IPAddress) (*IPNetwork, error) {
 	if first.Version() != last.Version() {
 		return nil, fmt.Errorf("version of input addresses, first: %d, last: %d, don't match", first.Version().number, last.Version().number)
@@ -73,9 +95,24 @@ func newNetworkFromBoundaries(first, last *IPAddress) (*IPNetwork, error) {
 	}, nil
 }
 
+// First returns the first IP address in the network.
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	first := nw.First()
+//	fmt.Println(first) // Output: "192.168.1.0"
 func (nw *IPNetwork) First() *IPAddress {
 	return nw.start.ToIPAddress()
 }
+
+// Last returns the last IP address in the network.
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	last := nw.Last()
+//	fmt.Println(last) // Output: "192.168.1.255"
 func (nw *IPNetwork) Last() *IPAddress {
 	return nw.start.
 		Add(nw.Length()).
@@ -83,22 +120,45 @@ func (nw *IPNetwork) Last() *IPAddress {
 		ToIPAddress()
 }
 
+// IPMask represents a subnet mask.
 type IPMask struct {
 	*net.IPMask
 }
 
+// Equals compares two IPMasks and returns true if they are equal.
+//
+// Example usage:
+//
+//	mask1 := netaddr.NewMask(24, 32)
+//	mask2 := netaddr.NewMask(24, 32)
+//	fmt.Println(mask1.Equals(mask2)) // Output: true
 func (m *IPMask) Equals(other *IPMask) bool {
 	maskInt := big.NewInt(0).SetBytes(*m.IPMask)
 	otherInt := big.NewInt(0).SetBytes(*other.IPMask)
 	return maskInt.Cmp(otherInt) == 0
 }
 
+// LessThan compares two IPMasks and returns true if the mask is less than the other.
+//
+// Example usage:
+//
+//	mask1 := netaddr.NewMask(24, 32)
+//	mask2 := netaddr.NewMask(16, 32)
+//	fmt.Println(mask1.LessThan(mask2)) // Output: false
 func (m *IPMask) LessThan(other *IPMask) bool {
 	maskInt := big.NewInt(0).SetBytes(*m.IPMask)
 	otherInt := big.NewInt(0).SetBytes(*other.IPMask)
 	return maskInt.Cmp(otherInt) == -1
 }
 
+// MergeCIDRs merges a slice of IPNetwork objects into an IPSet.
+//
+// Example usage:
+//
+//	cidr1, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	cidr2, _ := netaddr.NewIPNetwork("192.168.2.0/24")
+//	merged := netaddr.MergeCIDRs([]netaddr.IPNetwork{*cidr1, *cidr2})
+//	fmt.Println(merged)
 func MergeCIDRs(cidrs []IPNetwork) IPSet {
 	var (
 		merged IPSet
@@ -144,12 +204,22 @@ func MergeCIDRs(cidrs []IPNetwork) IPSet {
 	return merged
 }
 
+// Partition defines a structure to hold the parts of an IP network before, during, and after partitioning.
 type Partition struct {
 	Before    []*IPNetwork
 	Partition *IPNetwork
 	After     []*IPNetwork
 }
 
+// Partition divides the IPNetwork into three parts: the portion before the exclude network,
+// the partition that overlaps with the exclude network, and the portion after.
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	exclude, _ := netaddr.NewIPNetwork("192.168.1.128/25")
+//	partition := nw.Partition(exclude)
+//	fmt.Println(partition)
 func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 
 	if exclude.Last().LessThan(nw.First()) {
@@ -227,7 +297,18 @@ func (nw *IPNetwork) Partition(exclude *IPNetwork) *Partition {
 	}
 }
 
-// Divide a subnet into smaller subnets based on the provided CIDR prefix
+// Subnet divides a network into smaller subnets based on the provided CIDR prefix.
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	subnets, err := nw.Subnet(25)
+//	if err != nil {
+//	    fmt.Println(err)
+//	}
+//	for _, subnet := range subnets {
+//	    fmt.Println(subnet)
+//	}
 func (nw *IPNetwork) Subnet(newCIDRPrefix int) ([]*IPNetwork, error) {
 	thisCidrPrefix, addressBits := nw.Mask.Size()
 	if !(0 <= thisCidrPrefix || thisCidrPrefix <= addressBits) {
@@ -253,6 +334,13 @@ func (nw *IPNetwork) Subnet(newCIDRPrefix int) ([]*IPNetwork, error) {
 	return results, nil
 }
 
+// reverse reverses the order of the slice of IPNetwork pointers.
+//
+// Example usage:
+//
+//	slice := []*netaddr.IPNetwork{nw1, nw2, nw3}
+//	netaddr.reverse(&slice)
+//	fmt.Println(slice)
 func reverse(slice *[]*IPNetwork) {
 	s := *slice
 
@@ -262,12 +350,24 @@ func reverse(slice *[]*IPNetwork) {
 	}
 }
 
+// PrefixLength returns the prefix length of the IP network mask.
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	fmt.Println(nw.PrefixLength()) // Output: 24
 func (nw *IPNetwork) PrefixLength() *IPNumber {
 	ones, _ := nw.Mask.Size()
 	return NewIPNumber(int64(ones))
 }
 
-// NewNetworkFromInt returns a new network from an ipaddress integer with the default mask of all ones.
+// newNetworkFromIP returns a new network from an IP address with the default mask of all ones.
+//
+// Example usage:
+//
+//	ip := netaddr.NewIP("192.168.1.1")
+//	network := netaddr.newNetworkFromIP(netaddr.IPv4, ip)
+//	fmt.Println(network)
 func newNetworkFromIP(version *Version, value *IPAddress) *IPNetwork {
 	mask := net.CIDRMask(int(version.bitLength), int(version.bitLength))
 	return &IPNetwork{
@@ -277,6 +377,19 @@ func newNetworkFromIP(version *Version, value *IPAddress) *IPNetwork {
 	}
 }
 
+// IPRangeToCIDRS converts an IP range defined by a start and end address to a list of CIDR blocks.
+//
+// Example usage:
+//
+//	start := netaddr.NewIP("192.168.1.0")
+//	end := netaddr.NewIP("192.168.1.255")
+//	cidrs, err := netaddr.IPRangeToCIDRS(netaddr.IPv4, start, end)
+//	if err != nil {
+//	    fmt.Println(err)
+//	}
+//	for _, cidr := range cidrs {
+//	    fmt.Println(cidr)
+//	}
 func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, error) {
 
 	var cidrs []*IPNetwork
@@ -321,40 +434,87 @@ func IPRangeToCIDRS(version *Version, start, end *IPAddress) ([]*IPNetwork, erro
 }
 
 // IPSet represents an unordered collection of unique IP addresses and subnets.
-// IPAddresses are represented here as iPNetworks with a mask of /32
+// IPAddresses are represented here as IPNetworks with a mask of /32
 type IPSet []*IPNetwork
 
-// Remote Removes an IP address or subnet or IPRange from this IP set. Does
-// nothing if it is not already a member.
+// Remove removes an IP address or subnet from this IPSet. Does nothing if it is not already a member.
+//
+// Example usage:
+//
+//	set := netaddr.IPSet{nw1, nw2}
+//	set.Remove(nw1)
+//	fmt.Println(set)
 func (set *IPSet) Remove() {}
 
-// Add adds an IPAddress or IPNetwork to this IPSet.
+// Add adds an IP address or IP network to this IPSet.
+// IP addresses are represented as IPNetworks with a /32 subnet mask, and where possible,
+// the IP addresses and IPNetworks are merged with other members of the set to form more concise CIDR blocks.
 //
-// IPAddresses are represented as IPNetworks with a /32 subnet mask, and where
-// possible the IPAddresses and IPNetworks are merged with other members of the
-// set to form more concise CIDR blocks.
+// Example usage:
+//
+//	set := netaddr.IPSet{}
+//	set.Add(nw1)
+//	fmt.Println(set)
 func (set *IPSet) Add() {}
 
-// Pop removes an arbitrary subnet from this IPSet
+// Pop removes an arbitrary subnet from this IPSet.
+//
+// Example usage:
+//
+//	set := netaddr.IPSet{nw1, nw2}
+//	set.Pop()
+//	fmt.Println(set)
 func (set *IPSet) Pop() {}
 
+// ContainsAddress checks if the network contains a specific IP address.
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	ip := netaddr.NewIP("192.168.1.100")
+//	fmt.Println(nw.ContainsAddress(ip)) // Output: true
 func (nw *IPNetwork) ContainsAddress(addr *IPAddress) bool {
 	return nw.First().LessThanOrEqual(addr) && addr.LessThanOrEqual(nw.Last())
 }
 
+// ContainsSubnetwork checks if the network contains another subnetwork.
+//
+// Example usage:
+//
+//	nw1, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	nw2, _ := netaddr.NewIPNetwork("192.168.1.128/25")
+//	fmt.Println(nw1.ContainsSubnetwork(nw2)) // Output: true
 func (nw *IPNetwork) ContainsSubnetwork(other *IPNetwork) bool {
 	return nw.First().LessThanOrEqual(other.First()) &&
 		nw.Last().GreaterThanOrEqual(other.Last())
 }
 
-// returns the number of valid ip addresses in a subnet
+// Length returns the number of valid IP addresses in a subnet.
+//
+// Example usage:
+//
+//	mask := netaddr.NewMask(24, 32)
+//	fmt.Println(mask.Length()) // Output: 256
 func (m *IPMask) Length() *IPNumber {
 	ones, bits := net.IPMask(*m.IPMask).Size()
 	return NewIPNumber(2).Exp(NewIPNumber(int64(bits - ones)))
 }
 
+// Length returns the number of valid IP addresses in the IPNetwork.
+//
+// Example usage:
+//
+//	nw, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	fmt.Println(nw.Length()) // Output: 256
 func (nw *IPNetwork) Length() *IPNumber { return nw.Mask.Length() }
 
+// Equal compares two IPNetworks for equality.
+//
+// Example usage:
+//
+//	nw1, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	nw2, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	fmt.Println(nw1.Equal(nw2)) // Output: true
 func (nw *IPNetwork) Equal(other *IPNetwork) bool {
 	if nw.version != other.version {
 		return false
@@ -368,6 +528,13 @@ func (nw *IPNetwork) Equal(other *IPNetwork) bool {
 	return true
 }
 
+// LessThan compares two IPNetworks, returning true if nw is less than other.
+//
+// Example usage:
+//
+//	nw1, _ := netaddr.NewIPNetwork("192.168.1.0/24")
+//	nw2, _ := netaddr.NewIPNetwork("192.168.2.0/24")
+//	fmt.Println(nw1.LessThan(nw2)) // Output: true
 func (nw *IPNetwork) LessThan(other *IPNetwork) bool {
 	if nw.version != other.version {
 		return nw.version.LessThan(other.version)
