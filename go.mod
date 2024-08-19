@@ -1,6 +1,6 @@
 module github.com/mogthesprog/netaddr
 
-go 1.22
+go 1.23.0
 
 require github.com/stretchr/testify v1.2.2
 
