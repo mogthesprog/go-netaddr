@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 jobs:
-  gosec:
+  scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Source
