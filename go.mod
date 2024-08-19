@@ -1,4 +1,4 @@
-module github.com/mogthesprog/netaddr
+module github.com/mogthesprog/go-netaddr
 
 go 1.23.0
 
